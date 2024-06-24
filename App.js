@@ -1,10 +1,11 @@
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useState, useRef } from "react";
 import * as MediaLibrary from "expo-media-library"; //provides a usePermissions() hook that gives the permission status, and a requestPermission() method to ask for access to the media library when permission is not granted
 import { captureRef } from "react-native-view-shot"; //To allow the user to take a screenshot within the app
+import domtoimage from "dom-to-image"; //To save image on Windows
 
 import ImageViewer from "./components/ImageViewer";
 import Button from "./components/Button";
@@ -40,18 +41,35 @@ export default function App() {
   };
 
   const onSaveImageAsync = async () => {
-    try {
-      const localUri = await captureRef(imageRef, {
-        height: 400,
-        quality: 1,
-      });
-      console.log(localUri);
-      await MediaLibrary.saveToLibraryAsync(localUri);
-      if (localUri) {
-        alert("Saved!");
+    if (Platform.OS !== "web") {
+      try {
+        const localUri = await captureRef(imageRef, {
+          height: 400,
+          quality: 1,
+        });
+        console.log(localUri);
+        await MediaLibrary.saveToLibraryAsync(localUri);
+        if (localUri) {
+          alert("Saved!");
+        }
+      } catch (error) {
+        console.log(error);
       }
-    } catch (error) {
-      console.log(error);
+    } else {
+      try {
+        const dataUrl = await domtoimage.toJpeg(imageRef.current, {
+          quality: 0.95,
+          width: 320,
+          height: 440,
+        });
+
+        let link = document.createElement("a");
+        link.download = "sticker-smash.jpeg";
+        link.href = dataUrl;
+        link.click();
+      } catch (e) {
+        console.log(e);
+      }
     }
   };
 
