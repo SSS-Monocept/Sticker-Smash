@@ -2,7 +2,9 @@ import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import * as MediaLibrary from "expo-media-library"; //provides a usePermissions() hook that gives the permission status, and a requestPermission() method to ask for access to the media library when permission is not granted
+import { captureRef } from "react-native-view-shot"; //To allow the user to take a screenshot within the app
 
 import ImageViewer from "./components/ImageViewer";
 import Button from "./components/Button";
@@ -15,11 +17,16 @@ import EmojiSticker from "./components/EmojiSticker";
 const PlaceholderImage = require("./assets/images/background-image.png");
 
 export default function App() {
+  const imageRef = useRef();
+  const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
   const [pickedEmoji, setPickedEmoji] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [showAppOption, setShowAppOptions] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
 
+  if (permissionResponse == null) {
+    requestPermission();
+  }
   const onReset = () => {
     setShowAppOptions(false);
   };
@@ -33,7 +40,19 @@ export default function App() {
   };
 
   const onSaveImageAsync = async () => {
-    // we will implement this later
+    try {
+      const localUri = await captureRef(imageRef, {
+        height: 400,
+        quality: 1,
+      });
+      console.log(localUri);
+      await MediaLibrary.saveToLibraryAsync(localUri);
+      if (localUri) {
+        alert("Saved!");
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const pickImageAsync = async () => {
@@ -52,13 +71,18 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={styles.imageContainer}>
-        <ImageViewer
-          placeholderImageSource={PlaceholderImage}
-          selectedImage={selectedImage}
-        />
-        {pickedEmoji && (
-          <EmojiSticker imageSize={40} stickerSource={pickedEmoji} />
-        )}
+        {/* //We r required to wrap this into another view so that only the image
+        editted by sticker get saved as ss. //Othervise it will take ss of
+        entire screen of that view */}
+        <View ref={imageRef} collapsable={false}>
+          <ImageViewer
+            placeholderImageSource={PlaceholderImage}
+            selectedImage={selectedImage}
+          />
+          {pickedEmoji && (
+            <EmojiSticker imageSize={40} stickerSource={pickedEmoji} />
+          )}
+        </View>
       </View>
       {showAppOption ? (
         <View style={styles.optionsContainer}>
