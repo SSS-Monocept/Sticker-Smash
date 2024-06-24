@@ -35,6 +35,8 @@ export default function EmojiSticker({
     .onStart(() => {
       if (scaleImage.value !== imageSize * 2) {
         scaleImage.value = scaleImage.value * 2;
+      } else {
+        scaleImage.value = scaleImage.value / 2;
       }
     });
 
