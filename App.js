@@ -2,10 +2,10 @@ import { StatusBar } from "expo-status-bar";
 import { StyleSheet, View, Platform } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useState, useRef } from "react";
-import * as MediaLibrary from "expo-media-library"; //provides a usePermissions() hook that gives the permission status, and a requestPermission() method to ask for access to the media library when permission is not granted
-import { captureRef } from "react-native-view-shot"; //To allow the user to take a screenshot within the app
-import domtoimage from "dom-to-image"; //To save image on Windows
+import { useState, useRef, useEffect } from "react";
+import * as MediaLibrary from "expo-media-library";
+import { captureRef } from "react-native-view-shot";
+import domtoimage from "dom-to-image";
 
 import ImageViewer from "./components/ImageViewer";
 import Button from "./components/Button";
@@ -24,12 +24,21 @@ export default function App() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [showAppOption, setShowAppOptions] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [containerDimensions, setContainerDimensions] = useState({
+    width: 0,
+    height: 0,
+  });
 
-  if (permissionResponse == null) {
-    requestPermission();
-  }
+  useEffect(() => {
+    if (permissionResponse == null) {
+      requestPermission();
+    }
+  }, [permissionResponse]);
+
   const onReset = () => {
     setShowAppOptions(false);
+    setPickedEmoji(null);
+    setSelectedImage(null);
   };
 
   const onAddSticker = () => {
@@ -88,17 +97,25 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <View style={styles.imageContainer}>
-        {/* //We r required to wrap this into another view so that only the image
-        editted by sticker get saved as ss. //Othervise it will take ss of
-        entire screen of that view */}
+      <View
+        style={styles.imageContainer}
+        onLayout={() => {
+          imageRef.current.measure((x, y, width, height, pageX, pageY) => {
+            setContainerDimensions({ width, height });
+          });
+        }}
+      >
         <View ref={imageRef} collapsable={false}>
           <ImageViewer
             placeholderImageSource={PlaceholderImage}
             selectedImage={selectedImage}
           />
           {pickedEmoji && (
-            <EmojiSticker imageSize={40} stickerSource={pickedEmoji} />
+            <EmojiSticker
+              imageSize={40}
+              stickerSource={pickedEmoji}
+              containerDimensions={containerDimensions}
+            />
           )}
         </View>
       </View>
